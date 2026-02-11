@@ -16,7 +16,9 @@ A production-ready, modular gesture-controlled computer system that uses webcam 
 - **Scrolling**: Two-finger pinch with vertical motion or three fingers
 - **Dragging**: Index + middle finger pinch while moving or closed fist
 - **Swipe Navigation**: Browser back/forward with directional swipes
-- **Pause/Resume**: Thumbs up to toggle control
+- **Pause Control**: 
+  - **Harsh Pause**: Two hands open (immediate stop)
+  - **Regular Pause/Resume**: Thumbs up gesture toggle
 
 ### Keyboard Support
 - **Keyboard Shortcuts**: Copy (Ctrl+C), Paste (Ctrl+V), Undo (Ctrl+Z), Redo (Ctrl+Y)
@@ -24,12 +26,14 @@ A production-ready, modular gesture-controlled computer system that uses webcam 
 - **Custom Hotkeys**: Configurable keyboard combinations
 
 ### Advanced Features
+- **Two-Handed Gestures**: Harsh pause control with both hands
+- **Enhanced Error Handling**: Robust gesture recognition with validation
 - **Gesture Stabilization**: Reduces false triggers with buffering
 - **Smooth Cursor Movement**: Exponential smoothing for natural control
 - **Cross-Platform**: Works on Linux and Windows
 - **Configurable Settings**: Extensive customization options
 - **Real-time FPS Display**: Performance monitoring
-- **Visual Feedback**: On-screen gesture and status display
+- **Visual Feedback**: On-screen gesture and status display with color coding
 
 ## 📋 Requirements
 
@@ -89,9 +93,15 @@ gesture-controller
 | **Victory** (Index + Middle) | Double Click | V sign |
 | **Fist** (All closed) | Start Drag | Close fist |
 | **Three Fingers** | Scroll | Three fingers up |
-| **Thumbs Up** | Pause/Resume | Toggle control |
+| **Two Hands Open** | **Harsh Pause** | Both hands with open palms (immediate stop) |
+| **Thumbs Up** | Pause/Resume | Toggle control or resume from harsh pause |
 | **Swipe Left** | Navigate Back | Browser back |
 | **Swipe Right** | Navigate Forward | Browser forward |
+
+**Pause Control:**
+- 🔴 **Harsh Pause** (Red): Two hands open - immediate stop, requires thumbs up to resume
+- 🟡 **Regular Pause** (Yellow): Single thumbs up - toggles pause on/off
+- 🟢 **Active** (Green): System is active and processing gestures
 
 Press **ESC** to exit.
 
@@ -109,9 +119,13 @@ config.SHOW_FPS = True
 ### Key Settings
 
 - `CAMERA_INDEX`: Camera device (default: 0)
+- `MAX_NUM_HANDS`: Maximum hands to detect (default: 2)
 - `CURSOR_SMOOTHING`: Movement speed (0.0-1.0)
 - `PINCH_THRESHOLD`: Pinch sensitivity
 - `GESTURE_BUFFER_SIZE`: Stabilization frames
+- `TWO_HANDS_MIN_FINGERS`: Minimum fingers for two-handed pause (default: 3)
+- `HARSH_PAUSE_ENABLED`: Enable two-handed harsh pause (default: True)
+- `PAUSE_COOLDOWN`: Seconds between pause toggles (default: 1.0)
 - `SHOW_FPS`: Display frame rate
 - `DEBUG_MODE`: Enable debug output
 
