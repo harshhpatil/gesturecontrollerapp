@@ -1,9 +1,11 @@
 """Unit tests for control mapper module."""
-import pytest
+
 from unittest.mock import Mock
 
-from gesture_controller.control_mapper import ControlMapper
+import pytest
+
 from gesture_controller.config import Config
+from gesture_controller.control_mapper import ControlMapper
 
 
 class TestControlMapper:
@@ -31,10 +33,10 @@ class TestControlMapper:
         # Test known mapping
         action = mapper.map_gesture_to_action("POINT")
         assert action == "move_cursor"
-        
+
         action = mapper.map_gesture_to_action("LEFT_CLICK")
         assert action == "left_click"
-        
+
         # Test unknown gesture
         action = mapper.map_gesture_to_action("UNKNOWN")
         assert action is None
@@ -44,10 +46,10 @@ class TestControlMapper:
         # Test known swipe
         action = mapper.map_swipe_to_action("LEFT")
         assert action == "navigate_back"
-        
+
         action = mapper.map_swipe_to_action("RIGHT")
         assert action == "navigate_forward"
-        
+
         # Test unknown swipe
         action = mapper.map_swipe_to_action("DIAGONAL")
         assert action is None
@@ -55,7 +57,7 @@ class TestControlMapper:
     def test_register_custom_mapping(self, mapper):
         """Test registering custom gesture mapping."""
         mapper.register_custom_mapping("CUSTOM_GESTURE", "custom_action")
-        
+
         action = mapper.map_gesture_to_action("CUSTOM_GESTURE")
         assert action == "custom_action"
 
@@ -63,7 +65,7 @@ class TestControlMapper:
         """Test registering custom action handler."""
         mock_handler = Mock()
         mapper.register_action_handler("custom_action", mock_handler)
-        
+
         assert "custom_action" in mapper.action_handlers
         assert mapper.action_handlers["custom_action"] == mock_handler
 
@@ -72,10 +74,10 @@ class TestControlMapper:
         # Register handler
         mock_handler = Mock()
         mapper.register_action_handler("test_action", mock_handler)
-        
+
         # Execute action
         result = mapper.execute_action("test_action", "arg1", kwarg1="value1")
-        
+
         assert result is True
         mock_handler.assert_called_once_with("arg1", kwarg1="value1")
 
@@ -89,14 +91,14 @@ class TestControlMapper:
         desc = mapper.get_gesture_description("POINT")
         assert isinstance(desc, str)
         assert len(desc) > 0
-        
+
         desc = mapper.get_gesture_description("UNKNOWN")
         assert "Unknown" in desc
 
     def test_get_all_mappings(self, mapper):
         """Test getting all mappings."""
         mappings = mapper.get_all_mappings()
-        
+
         assert isinstance(mappings, dict)
         assert "POINT" in mappings
         assert "swipe_LEFT" in mappings
@@ -108,9 +110,9 @@ class TestControlMapper:
             "swipe_DIAGONAL": "diagonal_action",
             "keyboard_PEACE": "peace_action",
         }
-        
+
         mapper.load_mappings_from_dict(custom_mappings)
-        
+
         assert mapper.gesture_map["CUSTOM1"] == "action1"
         assert mapper.swipe_map["DIAGONAL"] == "diagonal_action"
         assert mapper.keyboard_map["PEACE"] == "peace_action"
@@ -119,14 +121,14 @@ class TestControlMapper:
         """Test resetting to default mappings."""
         # Modify mappings
         mapper.register_custom_mapping("CUSTOM", "custom")
-        
+
         # Reset
         mapper.reset_to_defaults()
-        
+
         # Check defaults are restored
         action = mapper.map_gesture_to_action("POINT")
         assert action == "move_cursor"
-        
+
         # Custom mapping should be gone
         action = mapper.map_gesture_to_action("CUSTOM")
         assert action is None or action == "move_cursor"  # May reset to default structure

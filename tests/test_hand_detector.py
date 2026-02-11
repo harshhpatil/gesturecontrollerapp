@@ -1,10 +1,12 @@
 """Unit tests for hand detector module."""
-import pytest
-import numpy as np
-from unittest.mock import Mock, patch, MagicMock
 
-from gesture_controller.hand_detector import HandDetector
+from unittest.mock import Mock, patch
+
+import numpy as np
+import pytest
+
 from gesture_controller.config import Config
+from gesture_controller.hand_detector import HandDetector
 
 
 class TestHandDetector:
@@ -18,7 +20,7 @@ class TestHandDetector:
     @pytest.fixture
     def detector(self, config):
         """Create HandDetector instance."""
-        with patch('gesture_controller.hand_detector.mp'):
+        with patch("gesture_controller.hand_detector.mp"):
             detector = HandDetector(config)
             detector.mp_hands = Mock()
             detector.hands = Mock()
@@ -26,7 +28,7 @@ class TestHandDetector:
 
     def test_initialization(self, config):
         """Test HandDetector initialization."""
-        with patch('gesture_controller.hand_detector.mp'):
+        with patch("gesture_controller.hand_detector.mp"):
             detector = HandDetector(config)
             assert detector.config == config
             assert detector.results is None
@@ -35,13 +37,13 @@ class TestHandDetector:
         """Test hand detection when no hands are present."""
         # Create mock frame
         frame = np.zeros((480, 640, 3), dtype=np.uint8)
-        
+
         # Mock no hands detected
         detector.hands.process = Mock(return_value=Mock(multi_hand_landmarks=None))
-        
+
         # Detect hands
         found, landmarks = detector.detect_hands(frame)
-        
+
         assert found is False
         assert landmarks is None
 
@@ -49,16 +51,14 @@ class TestHandDetector:
         """Test hand detection when hands are present."""
         # Create mock frame
         frame = np.zeros((480, 640, 3), dtype=np.uint8)
-        
+
         # Mock hands detected
         mock_landmarks = [Mock()]
-        detector.hands.process = Mock(
-            return_value=Mock(multi_hand_landmarks=mock_landmarks)
-        )
-        
+        detector.hands.process = Mock(return_value=Mock(multi_hand_landmarks=mock_landmarks))
+
         # Detect hands
         found, landmarks = detector.detect_hands(frame)
-        
+
         assert found is True
         assert landmarks == mock_landmarks
 
@@ -66,15 +66,15 @@ class TestHandDetector:
         """Test getting hand landmarks."""
         mock_landmarks = [Mock(), Mock()]
         detector.results = Mock(multi_hand_landmarks=mock_landmarks)
-        
+
         # Get first hand
         landmarks = detector.get_hand_landmarks(0)
         assert landmarks == mock_landmarks[0]
-        
+
         # Get second hand
         landmarks = detector.get_hand_landmarks(1)
         assert landmarks == mock_landmarks[1]
-        
+
         # Invalid index
         landmarks = detector.get_hand_landmarks(2)
         assert landmarks is None
@@ -83,18 +83,18 @@ class TestHandDetector:
         """Test getting landmark pixel position."""
         detector.frame_width = 640
         detector.frame_height = 480
-        
+
         # Create mock landmark
         mock_landmark = Mock()
         mock_landmark.x = 0.5
         mock_landmark.y = 0.5
-        
+
         mock_hand = Mock()
         mock_hand.landmark = [mock_landmark] * 21
-        
+
         # Get position
         pos = detector.get_landmark_position(mock_hand, 0)
-        
+
         assert pos == (320, 240)
 
     def test_calculate_distance(self, detector):
@@ -107,13 +107,13 @@ class TestHandDetector:
             mock_landmark.y = i * 0.1
             mock_landmark.z = 0
             mock_landmarks.append(mock_landmark)
-        
+
         mock_hand = Mock()
         mock_hand.landmark = mock_landmarks
-        
+
         # Calculate distance
         dist = detector.calculate_distance(mock_hand, 0, 10)
-        
+
         assert dist is not None
         assert dist > 0
 
@@ -126,19 +126,19 @@ class TestHandDetector:
             mock_landmark.x = 0.5
             mock_landmark.y = 0.5 - (i * 0.01)  # Fingers pointing up
             mock_landmarks.append(mock_landmark)
-        
+
         # Adjust specific landmarks for finger detection
         mock_landmarks[4].x = 0.6  # Thumb extended
         mock_landmarks[8].y = 0.3  # Index tip above base
         mock_landmarks[12].y = 0.3  # Middle tip above base
         mock_landmarks[16].y = 0.3  # Ring tip above base
         mock_landmarks[20].y = 0.3  # Pinky tip above base
-        
+
         mock_hand = Mock()
         mock_hand.landmark = mock_landmarks
-        
+
         finger_states = detector.get_finger_states(mock_hand)
-        
+
         assert isinstance(finger_states, dict)
         assert "thumb" in finger_states
         assert "index" in finger_states

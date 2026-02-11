@@ -1,5 +1,6 @@
 """Map gestures to OS-level actions."""
-from typing import Optional, Callable, Dict, Any
+
+from typing import Any, Callable, Dict, Optional
 
 from .config import Config
 
@@ -9,12 +10,12 @@ class ControlMapper:
 
     def __init__(self, config: Optional[Config] = None):
         """Initialize control mapper.
-        
+
         Args:
             config: Configuration object (uses default Config if None)
         """
         self.config = config or Config()
-        
+
         # Default gesture-to-action mappings
         self.gesture_map = {
             "POINT": "move_cursor",
@@ -27,7 +28,7 @@ class ControlMapper:
             "THUMBS_UP": "pause",
             "FIST": "drag",
         }
-        
+
         # Swipe-to-action mappings
         self.swipe_map = {
             "LEFT": "navigate_back",
@@ -35,22 +36,22 @@ class ControlMapper:
             "UP": "volume_up",
             "DOWN": "volume_down",
         }
-        
+
         # Keyboard gesture mappings
         self.keyboard_map = {
             "PEACE": "copy",  # Peace sign for copy
             "OK": "paste",  # OK sign for paste
         }
-        
+
         # Custom action handlers
         self.action_handlers: Dict[str, Callable] = {}
 
     def map_gesture_to_action(self, gesture: str) -> Optional[str]:
         """Map a gesture to its corresponding action.
-        
+
         Args:
             gesture: Recognized gesture name
-            
+
         Returns:
             Action name or None
         """
@@ -58,10 +59,10 @@ class ControlMapper:
 
     def map_swipe_to_action(self, swipe_direction: str) -> Optional[str]:
         """Map a swipe direction to its corresponding action.
-        
+
         Args:
             swipe_direction: Swipe direction (LEFT, RIGHT, UP, DOWN)
-            
+
         Returns:
             Action name or None
         """
@@ -69,10 +70,10 @@ class ControlMapper:
 
     def map_keyboard_gesture(self, gesture: str) -> Optional[str]:
         """Map a gesture to keyboard action.
-        
+
         Args:
             gesture: Gesture name
-            
+
         Returns:
             Keyboard action name or None
         """
@@ -80,18 +81,16 @@ class ControlMapper:
 
     def register_custom_mapping(self, gesture: str, action: str) -> None:
         """Register a custom gesture-to-action mapping.
-        
+
         Args:
             gesture: Gesture name
             action: Action name
         """
         self.gesture_map[gesture] = action
 
-    def register_action_handler(
-        self, action: str, handler: Callable[[Any], None]
-    ) -> None:
+    def register_action_handler(self, action: str, handler: Callable[[Any], None]) -> None:
         """Register a custom action handler.
-        
+
         Args:
             action: Action name
             handler: Callable that handles the action
@@ -100,12 +99,12 @@ class ControlMapper:
 
     def execute_action(self, action: str, *args, **kwargs) -> bool:
         """Execute a custom action if handler is registered.
-        
+
         Args:
             action: Action name
             *args: Positional arguments for handler
             **kwargs: Keyword arguments for handler
-            
+
         Returns:
             True if action was executed, False otherwise
         """
@@ -116,10 +115,10 @@ class ControlMapper:
 
     def get_gesture_description(self, gesture: str) -> str:
         """Get human-readable description of a gesture.
-        
+
         Args:
             gesture: Gesture name
-            
+
         Returns:
             Description string
         """
@@ -139,7 +138,7 @@ class ControlMapper:
 
     def get_all_mappings(self) -> Dict[str, str]:
         """Get all current gesture-to-action mappings.
-        
+
         Returns:
             Dictionary of gesture-to-action mappings
         """
@@ -151,7 +150,7 @@ class ControlMapper:
 
     def load_mappings_from_dict(self, mappings: Dict[str, str]) -> None:
         """Load gesture mappings from a dictionary.
-        
+
         Args:
             mappings: Dictionary of gesture-to-action mappings
         """

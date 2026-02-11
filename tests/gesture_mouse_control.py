@@ -1,8 +1,9 @@
+import time
+from collections import deque
+
 import cv2
 import mediapipe as mp
 import pyautogui
-import time
-from collections import deque
 
 # ---------------- Safety ----------------
 pyautogui.FAILSAFE = False
@@ -15,7 +16,7 @@ hands = mp_hands.Hands(
     static_image_mode=False,
     max_num_hands=1,
     min_detection_confidence=0.6,
-    min_tracking_confidence=0.6
+    min_tracking_confidence=0.6,
 )
 
 # ---------------- Screen ----------------
@@ -31,21 +32,20 @@ CLICK_COOLDOWN = 0.6  # seconds
 last_click_time = 0
 dragging = False
 
+
 # ---------------- Finger States ----------------
 def get_finger_states(hand_landmarks):
     fingers = {}
 
-    fingers["thumb"] = (
-        hand_landmarks.landmark[4].x >
-        hand_landmarks.landmark[3].x
-    )
+    fingers["thumb"] = hand_landmarks.landmark[4].x > hand_landmarks.landmark[3].x
 
-    fingers["index"]  = hand_landmarks.landmark[8].y  < hand_landmarks.landmark[6].y
+    fingers["index"] = hand_landmarks.landmark[8].y < hand_landmarks.landmark[6].y
     fingers["middle"] = hand_landmarks.landmark[12].y < hand_landmarks.landmark[10].y
-    fingers["ring"]   = hand_landmarks.landmark[16].y < hand_landmarks.landmark[14].y
-    fingers["pinky"]  = hand_landmarks.landmark[20].y < hand_landmarks.landmark[18].y
+    fingers["ring"] = hand_landmarks.landmark[16].y < hand_landmarks.landmark[14].y
+    fingers["pinky"] = hand_landmarks.landmark[20].y < hand_landmarks.landmark[18].y
 
     return fingers
+
 
 # ---------------- Gesture Classification ----------------
 def classify_gesture(fingers):
@@ -66,14 +66,17 @@ def classify_gesture(fingers):
 
     return "UNKNOWN"
 
+
 # ---------------- Stabilization ----------------
 gesture_buffer = deque(maxlen=5)
+
 
 def get_stable_gesture(current):
     gesture_buffer.append(current)
     if gesture_buffer.count(current) >= 4:
         return current
     return None
+
 
 # ---------------- Camera ----------------
 cap = cv2.VideoCapture(0)
@@ -97,11 +100,7 @@ while True:
 
     if result.multi_hand_landmarks:
         for hand in result.multi_hand_landmarks:
-            mp_draw.draw_landmarks(
-                frame,
-                hand,
-                mp_hands.HAND_CONNECTIONS
-            )
+            mp_draw.draw_landmarks(frame, hand, mp_hands.HAND_CONNECTIONS)
 
             fingers = get_finger_states(hand)
             gesture = classify_gesture(fingers)
@@ -146,13 +145,7 @@ while True:
 
             # -------- UI --------
             cv2.putText(
-                frame,
-                f"Gesture: {stable}",
-                (10, 40),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 255, 0),
-                2
+                frame, f"Gesture: {stable}", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2
             )
 
     cv2.imshow("Gesture Mouse Control", frame)

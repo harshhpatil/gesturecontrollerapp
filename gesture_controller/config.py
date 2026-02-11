@@ -1,6 +1,7 @@
 """Configuration management for gesture controller."""
+
 import os
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 class Config:
@@ -68,7 +69,7 @@ class Config:
     @classmethod
     def load_from_dict(cls, config_dict: Dict[str, Any]) -> None:
         """Load configuration from dictionary.
-        
+
         Args:
             config_dict: Dictionary containing configuration values
         """
@@ -79,14 +80,14 @@ class Config:
     @classmethod
     def load_from_file(cls, filepath: str) -> None:
         """Load configuration from JSON or YAML file.
-        
+
         Args:
             filepath: Path to configuration file
         """
         import json
-        
-        with open(filepath, 'r', encoding='utf-8') as f:
-            if filepath.endswith('.json'):
+
+        with open(filepath, "r", encoding="utf-8") as f:
+            if filepath.endswith(".json"):
                 config_dict = json.load(f)
                 cls.load_from_dict(config_dict)
             else:
@@ -95,12 +96,12 @@ class Config:
     @classmethod
     def to_dict(cls) -> Dict[str, Any]:
         """Export configuration as dictionary.
-        
+
         Returns:
             Dictionary containing all configuration values
         """
         return {
             key: value
             for key, value in vars(cls).items()
-            if not key.startswith('_') and key.isupper()
+            if not key.startswith("_") and key.isupper()
         }
