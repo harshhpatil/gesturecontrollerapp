@@ -27,6 +27,7 @@ class ControlMapper:
             "VICTORY": "double_click",
             "THUMBS_UP": "pause",
             "FIST": "drag",
+            "TWO_HANDS_OPEN": "harsh_pause",
         }
 
         # Swipe-to-action mappings
@@ -133,6 +134,7 @@ class ControlMapper:
             "THUMBS_UP": "Thumbs up to pause/resume",
             "FIST": "Closed fist to start dragging",
             "IDLE": "No active gesture",
+            "TWO_HANDS_OPEN": "Both hands open (stop gesture) for harsh pause",
         }
         return descriptions.get(gesture, "Unknown gesture")
 

@@ -13,7 +13,7 @@ class Config:
     CAMERA_HEIGHT: int = 480
 
     # Hand detection settings (MediaPipe)
-    MAX_NUM_HANDS: int = 1
+    MAX_NUM_HANDS: int = 2  # Support two hands for two-handed gestures
     MODEL_COMPLEXITY: int = 0  # 0 or 1 (0 is faster)
     MIN_DETECTION_CONFIDENCE: float = 0.6
     MIN_TRACKING_CONFIDENCE: float = 0.6
@@ -27,6 +27,10 @@ class Config:
     PALM_THRESHOLD: int = 3  # Minimum fingers for palm gesture
     GESTURE_BUFFER_SIZE: int = 5  # Frames to buffer for stability
     GESTURE_CONFIDENCE_THRESHOLD: int = 3  # Minimum occurrences to confirm
+
+    # Two-handed gesture settings
+    TWO_HANDS_MIN_FINGERS: int = 3  # Minimum fingers extended per hand for open palm
+    TWO_HANDS_CONFIDENCE_FRAMES: int = 3  # Frames to confirm two-handed gesture
 
     # Click settings
     LEFT_CLICK_COOLDOWN: float = 0.5  # Seconds between left clicks
@@ -61,6 +65,10 @@ class Config:
     # Performance settings
     PROCESSING_THREAD_ENABLED: bool = True
     MAX_PROCESSING_FPS: int = 30
+
+    # Pause settings
+    PAUSE_COOLDOWN: float = 1.0  # Seconds between pause toggles
+    HARSH_PAUSE_ENABLED: bool = True  # Enable two-handed harsh pause
 
     # Debug settings
     DEBUG_MODE: bool = os.getenv("DEBUG", "false").lower() == "true"

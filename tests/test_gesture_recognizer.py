@@ -204,3 +204,126 @@ class TestGestureRecognizer:
         assert len(recognizer.gesture_buffer) == 0
         assert len(recognizer.position_history) == 0
         assert recognizer.current_gesture is None
+        assert len(recognizer.two_hands_buffer) == 0
+
+    def test_validate_finger_states(self, recognizer):
+        """Test finger states validation."""
+        # Valid finger states
+        valid_states = {
+            "thumb": True,
+            "index": True,
+            "middle": False,
+            "ring": False,
+            "pinky": False,
+        }
+        assert recognizer._validate_finger_states(valid_states) is True
+
+        # Invalid - missing keys
+        invalid_states = {"thumb": True, "index": True}
+        assert recognizer._validate_finger_states(invalid_states) is False
+
+        # Invalid - not a dict
+        assert recognizer._validate_finger_states(None) is False
+        assert recognizer._validate_finger_states("invalid") is False
+
+    def test_validate_hand_landmarks(self, recognizer):
+        """Test hand landmarks validation."""
+        # Valid hand landmarks
+        mock_hand = Mock()
+        mock_hand.landmark = [Mock() for _ in range(21)]
+        assert recognizer._validate_hand_landmarks(mock_hand) is True
+
+        # Invalid - not enough landmarks
+        mock_hand_invalid = Mock()
+        mock_hand_invalid.landmark = [Mock() for _ in range(10)]
+        assert recognizer._validate_hand_landmarks(mock_hand_invalid) is False
+
+        # Invalid - no landmark attribute
+        mock_hand_no_attr = Mock(spec=[])
+        assert recognizer._validate_hand_landmarks(mock_hand_no_attr) is False
+
+        # Invalid - None
+        assert recognizer._validate_hand_landmarks(None) is False
+
+    def test_recognize_two_handed_gesture_insufficient_hands(self, recognizer):
+        """Test two-handed gesture with insufficient hands."""
+        # No hands
+        assert recognizer.recognize_two_handed_gesture([], Mock()) is None
+
+        # Only one hand
+        mock_hand = Mock()
+        assert recognizer.recognize_two_handed_gesture([mock_hand], Mock()) is None
+
+    def test_recognize_two_handed_gesture_open(self, recognizer):
+        """Test recognizing two hands open gesture."""
+        # Create mock hands with valid landmarks
+        mock_hand1 = Mock()
+        mock_hand1.landmark = [Mock() for _ in range(21)]
+
+        mock_hand2 = Mock()
+        mock_hand2.landmark = [Mock() for _ in range(21)]
+
+        # Mock hand detector
+        mock_detector = Mock()
+
+        # Both hands with multiple fingers extended (open palms)
+        def mock_get_finger_states(hand):
+            return {
+                "thumb": True,
+                "index": True,
+                "middle": True,
+                "ring": True,
+                "pinky": False,
+            }
+
+        mock_detector.get_finger_states = mock_get_finger_states
+
+        # Call multiple times to fill buffer
+        for _ in range(recognizer.config.TWO_HANDS_CONFIDENCE_FRAMES):
+            result = recognizer.recognize_two_handed_gesture([mock_hand1, mock_hand2], mock_detector)
+
+        # Should detect TWO_HANDS_OPEN after enough frames
+        assert result == "TWO_HANDS_OPEN"
+
+    def test_recognize_two_handed_gesture_insufficient_fingers(self, recognizer):
+        """Test two-handed gesture with insufficient fingers extended."""
+        # Create mock hands
+        mock_hand1 = Mock()
+        mock_hand1.landmark = [Mock() for _ in range(21)]
+
+        mock_hand2 = Mock()
+        mock_hand2.landmark = [Mock() for _ in range(21)]
+
+        # Mock hand detector
+        mock_detector = Mock()
+
+        # One hand with insufficient fingers
+        def mock_get_finger_states(hand):
+            return {
+                "thumb": True,
+                "index": True,
+                "middle": False,
+                "ring": False,
+                "pinky": False,
+            }
+
+        mock_detector.get_finger_states = mock_get_finger_states
+
+        # Call multiple times
+        for _ in range(recognizer.config.TWO_HANDS_CONFIDENCE_FRAMES):
+            result = recognizer.recognize_two_handed_gesture([mock_hand1, mock_hand2], mock_detector)
+
+        # Should not detect TWO_HANDS_OPEN
+        assert result is None
+
+    def test_recognize_gesture_with_error_handling(self, recognizer):
+        """Test gesture recognition with invalid input."""
+        # None finger states
+        assert recognizer.recognize_gesture(None, None, None) == "IDLE"
+
+        # Empty finger states
+        assert recognizer.recognize_gesture({}, None, None) == "IDLE"
+
+        # Invalid finger states
+        invalid_states = {"invalid": True}
+        assert recognizer.recognize_gesture(invalid_states, None, None) == "IDLE"
