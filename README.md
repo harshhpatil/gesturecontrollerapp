@@ -1,46 +1,205 @@
-# Gesture Based Mouse Control System
+# Gesture Controller - Hand Gesture-Based Computer Control
 
-A real-time gesture-based mouse control application that allows users to control cursor movement, clicking, dragging, scrolling, and navigation using hand gestures captured via a webcam.
+[![CI Pipeline](https://github.com/harshhpatil/gesturecontrollerapp/workflows/CI%20Pipeline/badge.svg)](https://github.com/harshhpatil/gesturecontrollerapp/actions)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
----
+A production-ready, modular gesture-controlled computer system that uses webcam video to track hand movements in real-time and convert them into system-level actions. Control your computer with intuitive hand gestures - no mouse or keyboard required!
 
-## Features
-- Cursor movement using index finger
-- Left click using victory gesture (✌️)
-- Scroll using three fingers
-- Drag & drop using fist
-- Swipe navigation (back / forward)
-- Pause / resume using pinch gesture
-- User-calibrated smooth controls
+## ✨ Features
 
----
+### Core Capabilities
+- **Mouse Control**: Precise cursor movement using index finger tracking
+- **Left Click**: Pinch gesture (thumb + index finger)
+- **Right Click**: Open palm gesture
+- **Double Click**: Victory/Peace gesture (index + middle fingers)
+- **Scrolling**: Two-finger pinch with vertical motion or three fingers
+- **Dragging**: Index + middle finger pinch while moving or closed fist
+- **Swipe Navigation**: Browser back/forward with directional swipes
+- **Pause/Resume**: Thumbs up to toggle control
 
-## Technologies Used
-- Python 3
-- OpenCV
-- MediaPipe
-- PyAutoGUI
+### Keyboard Support
+- **Keyboard Shortcuts**: Copy (Ctrl+C), Paste (Ctrl+V), Undo (Ctrl+Z), Redo (Ctrl+Y)
+- **Text Typing**: Letter and number input support
+- **Custom Hotkeys**: Configurable keyboard combinations
 
----
+### Advanced Features
+- **Gesture Stabilization**: Reduces false triggers with buffering
+- **Smooth Cursor Movement**: Exponential smoothing for natural control
+- **Cross-Platform**: Works on Linux and Windows
+- **Configurable Settings**: Extensive customization options
+- **Real-time FPS Display**: Performance monitoring
+- **Visual Feedback**: On-screen gesture and status display
 
-## Gesture Controls
+## 📋 Requirements
 
-| Gesture | Action |
-|------|------|
-| Index finger | Move cursor |
-| Victory (✌️) | Left click |
-| Three fingers | Scroll |
-| Fist | Drag |
-| Index swipe | Back / Forward |
-| Pinch | Pause |
+- **Python**: 3.8 or higher
+- **Webcam**: Built-in or external USB camera
+- **Operating System**: Linux or Windows
+- **Processor**: Recommended dual-core or better
 
----
+## 🚀 Installation
 
-## How to Run
+### Quick Install
+
 ```bash
+# Clone the repository
+git clone https://github.com/harshhpatil/gesturecontrollerapp.git
+cd gesturecontrollerapp
+
+# Create virtual environment
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate  # Linux/Mac
+# .venv\Scripts\activate   # Windows
+
+# Install dependencies
 pip install -r requirements.txt
-python src/main.py
 
+# Install as package (optional)
+pip install -e .
+```
 
+### System Dependencies
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get update
+sudo apt-get install -y libgl1-mesa-glx libglib2.0-0
+```
+
+## 📖 Usage
+
+### Basic Usage
+
+```bash
+# Using Python module
+python -m gesture_controller.main
+
+# Or if installed as package
+gesture-controller
+```
+
+### Controls
+
+| Gesture | Action | Description |
+|---------|--------|-------------|
+| **Point** (Index finger) | Move Cursor | Point to control cursor |
+| **Pinch** (Thumb + Index) | Left Click | Pinch fingers together |
+| **Palm** (All fingers) | Right Click | Open hand |
+| **Victory** (Index + Middle) | Double Click | V sign |
+| **Fist** (All closed) | Start Drag | Close fist |
+| **Three Fingers** | Scroll | Three fingers up |
+| **Thumbs Up** | Pause/Resume | Toggle control |
+| **Swipe Left** | Navigate Back | Browser back |
+| **Swipe Right** | Navigate Forward | Browser forward |
+
+Press **ESC** to exit.
+
+## ⚙️ Configuration
+
+```python
+from gesture_controller.config import Config
+
+config = Config()
+config.CAMERA_INDEX = 0
+config.CURSOR_SMOOTHING = 0.7
+config.SHOW_FPS = True
+```
+
+### Key Settings
+
+- `CAMERA_INDEX`: Camera device (default: 0)
+- `CURSOR_SMOOTHING`: Movement speed (0.0-1.0)
+- `PINCH_THRESHOLD`: Pinch sensitivity
+- `GESTURE_BUFFER_SIZE`: Stabilization frames
+- `SHOW_FPS`: Display frame rate
+- `DEBUG_MODE`: Enable debug output
+
+## 🏗️ Architecture
+
+```
+gesture_controller/
+├── main.py                 # Entry point & orchestration
+├── hand_detector.py        # MediaPipe hand detection
+├── gesture_recognizer.py   # Gesture recognition
+├── control_mapper.py       # Gesture-to-action mapping
+├── os_controller.py        # OS-level control (pynput)
+└── config.py              # Configuration management
+```
+
+## 🛠️ Development
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# With coverage
+pytest tests/ --cov=gesture_controller
+```
+
+### Code Quality
+
+```bash
+# Format code
+black gesture_controller/ tests/
+isort gesture_controller/ tests/
+
+# Lint
+flake8 gesture_controller/ tests/
+pylint gesture_controller/
+```
+
+## 🔧 Troubleshooting
+
+**Camera not opening:**
+- Check camera is not in use
+- Try different `CAMERA_INDEX` values
+- Verify camera permissions
+
+**Low FPS:**
+- Close resource-intensive apps
+- Reduce resolution
+- Set `MODEL_COMPLEXITY = 0`
+- Ensure good lighting
+
+**Hand not detected:**
+- Improve lighting
+- Keep hand in view
+- Reduce `MIN_DETECTION_CONFIDENCE`
+
+**False triggers:**
+- Increase `GESTURE_BUFFER_SIZE`
+- Adjust cooldown times
+
+## 🎯 Future Enhancements
+
+- Multi-hand support
+- Custom gesture training
+- Voice command integration
+- Mobile app control
+- Gesture macros
+- VR/AR integration
+- AI-powered prediction
+- Multi-language layouts
+
+## 📜 License
+
+MIT License - see [LICENSE](LICENSE) file.
+
+## 🙏 Acknowledgments
+
+- **MediaPipe**: Hand tracking
+- **OpenCV**: Computer vision
+- **pynput**: Cross-platform input
+- **PyAutoGUI**: Screen automation
+
+## 📧 Contact
+
+**Harsh Patil**
+- GitHub: [@harshhpatil](https://github.com/harshhpatil)
+
+---
+
+**Made with ❤️ for hands-free computing**
