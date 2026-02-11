@@ -1,7 +1,7 @@
 """Gesture recognition module."""
 
 from collections import deque
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 
@@ -28,7 +28,12 @@ class GestureRecognizer:
         # Current stable gesture
         self.current_gesture = None
 
-    def recognize_gesture(self, finger_states: dict, hand_landmarks, hand_detector=None) -> str:
+        # Two-handed gesture tracking
+        self.two_hands_buffer = deque(maxlen=self.config.TWO_HANDS_CONFIDENCE_FRAMES)
+
+    def recognize_gesture(
+        self, finger_states: dict, hand_landmarks: Any, hand_detector: Any = None
+    ) -> str:
         """Recognize gesture from finger states and landmarks.
 
         Args:
@@ -42,22 +47,31 @@ class GestureRecognizer:
         if not finger_states:
             return "IDLE"
 
+        # Validate finger states
+        if not self._validate_finger_states(finger_states):
+            return "IDLE"
+
         # Count extended fingers
         extended_count = sum(finger_states.values())
 
         # Pinch gesture (thumb and index close together)
         if hand_detector and hand_landmarks:
-            thumb_index_dist = hand_detector.calculate_distance(hand_landmarks, 4, 8)
-            if thumb_index_dist and thumb_index_dist < self.config.PINCH_THRESHOLD:
-                # Left click pinch (only thumb and index extended)
-                if finger_states["thumb"] and finger_states["index"] and extended_count == 2:
-                    return "LEFT_CLICK"
-                # Drag pinch (index and middle)
-                if finger_states["index"] and finger_states["middle"] and extended_count == 2:
-                    return "DRAG"
-                # Scroll pinch (thumb and index)
-                if finger_states["thumb"] and finger_states["index"]:
-                    return "SCROLL"
+            try:
+                thumb_index_dist = hand_detector.calculate_distance(hand_landmarks, 4, 8)
+                if thumb_index_dist and thumb_index_dist < self.config.PINCH_THRESHOLD:
+                    # Left click pinch (only thumb and index extended)
+                    if finger_states["thumb"] and finger_states["index"] and extended_count == 2:
+                        return "LEFT_CLICK"
+                    # Drag pinch (index and middle)
+                    if finger_states["index"] and finger_states["middle"] and extended_count == 2:
+                        return "DRAG"
+                    # Scroll pinch (thumb and index)
+                    if finger_states["thumb"] and finger_states["index"]:
+                        return "SCROLL"
+            except (AttributeError, IndexError, TypeError) as e:
+                if self.config.DEBUG_MODE:
+                    print(f"Error in pinch detection: {e}")
+                return "IDLE"
 
         # Palm gesture (all or most fingers extended) - Right click
         if extended_count >= self.config.PALM_THRESHOLD:
@@ -133,7 +147,7 @@ class GestureRecognizer:
 
         return self.current_gesture
 
-    def detect_swipe(self, hand_landmarks, hand_detector) -> Optional[str]:
+    def detect_swipe(self, hand_landmarks: Any, hand_detector: Any) -> Optional[str]:
         """Detect swipe gestures.
 
         Args:
@@ -186,7 +200,7 @@ class GestureRecognizer:
             else:
                 return "UP"
 
-    def detect_circular_motion(self, hand_landmarks, hand_detector) -> Optional[str]:
+    def detect_circular_motion(self, hand_landmarks: Any, hand_detector: Any) -> Optional[str]:
         """Detect circular motion patterns.
 
         Args:
@@ -248,3 +262,104 @@ class GestureRecognizer:
         self.gesture_buffer.clear()
         self.position_history.clear()
         self.current_gesture = None
+        self.two_hands_buffer.clear()
+
+    def _validate_finger_states(self, finger_states: dict) -> bool:
+        """Validate finger states dictionary.
+
+        Args:
+            finger_states: Dictionary of finger extended states
+
+        Returns:
+            True if valid, False otherwise
+        """
+        required_keys = {"thumb", "index", "middle", "ring", "pinky"}
+        if not isinstance(finger_states, dict):
+            return False
+        return required_keys.issubset(finger_states.keys())
+
+    def _validate_hand_landmarks(self, hand_landmarks: Any) -> bool:
+        """Validate hand landmarks object.
+
+        Args:
+            hand_landmarks: Hand landmarks object to validate
+
+        Returns:
+            True if valid, False otherwise
+        """
+        try:
+            if not hand_landmarks or not hasattr(hand_landmarks, "landmark"):
+                return False
+            # Check if we have all 21 landmarks
+            return len(hand_landmarks.landmark) == 21
+        except (AttributeError, TypeError):
+            return False
+
+    def recognize_two_handed_gesture(
+        self, hand_landmarks_list: list, hand_detector: Any
+    ) -> Optional[str]:
+        """Recognize two-handed gestures.
+
+        Args:
+            hand_landmarks_list: List of hand landmarks (should have 2 hands)
+            hand_detector: HandDetector instance
+
+        Returns:
+            Two-handed gesture name or None
+        """
+        if not hand_landmarks_list or len(hand_landmarks_list) < 2:
+            self.two_hands_buffer.clear()
+            return None
+
+        if not hand_detector:
+            return None
+
+        # Validate both hands
+        hand1 = hand_landmarks_list[0]
+        hand2 = hand_landmarks_list[1]
+
+        if not self._validate_hand_landmarks(hand1) or not self._validate_hand_landmarks(hand2):
+            self.two_hands_buffer.clear()
+            return None
+
+        try:
+            # Get finger states for both hands
+            finger_states1 = hand_detector.get_finger_states(hand1)
+            finger_states2 = hand_detector.get_finger_states(hand2)
+
+            # Validate finger states
+            if not self._validate_finger_states(finger_states1) or not self._validate_finger_states(
+                finger_states2
+            ):
+                self.two_hands_buffer.clear()
+                return None
+
+            # Count extended fingers for both hands
+            extended1 = sum(finger_states1.values())
+            extended2 = sum(finger_states2.values())
+
+            # Two hands open gesture (both hands with open palms)
+            min_fingers = self.config.TWO_HANDS_MIN_FINGERS
+            if extended1 >= min_fingers and extended2 >= min_fingers:
+                # Both hands have multiple fingers extended (open palm gesture)
+                gesture_detected = True
+            else:
+                gesture_detected = False
+
+            # Add to buffer for stabilization
+            self.two_hands_buffer.append(gesture_detected)
+
+            # Check if we have enough confidence
+            if len(self.two_hands_buffer) >= self.config.TWO_HANDS_CONFIDENCE_FRAMES:
+                # Count true values in buffer
+                true_count = sum(self.two_hands_buffer)
+                if true_count >= self.config.TWO_HANDS_CONFIDENCE_FRAMES:
+                    return "TWO_HANDS_OPEN"
+
+            return None
+
+        except (AttributeError, IndexError, TypeError, KeyError) as e:
+            if self.config.DEBUG_MODE:
+                print(f"Error in two-handed gesture detection: {e}")
+            self.two_hands_buffer.clear()
+            return None

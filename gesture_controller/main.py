@@ -2,9 +2,10 @@
 
 import sys
 import time
-from typing import Optional
+from typing import Any, Optional, Tuple
 
 import cv2
+import numpy as np
 
 from .config import Config
 from .control_mapper import ControlMapper
@@ -34,6 +35,7 @@ class GestureController:
         self.camera = None
         self.is_running = False
         self.is_paused = False
+        self.is_harsh_paused = False  # Two-handed harsh pause state
 
         # Performance tracking
         self.fps = 0
@@ -68,7 +70,7 @@ class GestureController:
             print(f"Camera initialization error: {e}")
             return False
 
-    def process_frame(self, frame):
+    def process_frame(self, frame: np.ndarray) -> np.ndarray:
         """Process a single frame.
 
         Args:
@@ -81,7 +83,13 @@ class GestureController:
         frame = cv2.flip(frame, 1)
 
         # Detect hands
-        hands_found, hand_landmarks_list = self.hand_detector.detect_hands(frame)
+        try:
+            hands_found, hand_landmarks_list = self.hand_detector.detect_hands(frame)
+        except Exception as e:
+            if self.config.DEBUG_MODE:
+                print(f"Error detecting hands: {e}")
+            self._draw_status(frame, "Detection error", (0, 0, 255))
+            return frame
 
         if not hands_found or not hand_landmarks_list:
             # No hands detected
@@ -89,20 +97,60 @@ class GestureController:
                 self._draw_status(frame, "No hand detected", (0, 0, 255))
             return frame
 
-        # Get first hand
+        # Check for two-handed gesture first (if enabled)
+        two_handed_gesture = None
+        if self.config.HARSH_PAUSE_ENABLED and len(hand_landmarks_list) >= 2:
+            try:
+                two_handed_gesture = self.gesture_recognizer.recognize_two_handed_gesture(
+                    hand_landmarks_list, self.hand_detector
+                )
+
+                # Handle two-handed harsh pause
+                if two_handed_gesture == "TWO_HANDS_OPEN":
+                    self._activate_harsh_pause()
+
+                    # Draw landmarks for both hands if enabled
+                    if self.config.SHOW_LANDMARKS:
+                        for hand_landmarks in hand_landmarks_list[:2]:
+                            self.hand_detector.draw_landmarks(frame, hand_landmarks)
+
+                    # Display two-handed gesture
+                    if self.config.SHOW_GESTURES:
+                        self._draw_gesture(frame, "TWO_HANDS_OPEN")
+
+                    # Display harsh pause status
+                    self._draw_pause_status(frame)
+                    return frame
+
+            except Exception as e:
+                if self.config.DEBUG_MODE:
+                    print(f"Error in two-handed gesture detection: {e}")
+
+        # Get first hand for single-hand gestures
         hand_landmarks = hand_landmarks_list[0]
 
         # Draw landmarks if enabled
         if self.config.SHOW_LANDMARKS:
             self.hand_detector.draw_landmarks(frame, hand_landmarks)
 
-        # Get finger states
-        finger_states = self.hand_detector.get_finger_states(hand_landmarks)
+        # Get finger states with error handling
+        try:
+            finger_states = self.hand_detector.get_finger_states(hand_landmarks)
+        except Exception as e:
+            if self.config.DEBUG_MODE:
+                print(f"Error getting finger states: {e}")
+            self._draw_status(frame, "Finger state error", (0, 0, 255))
+            return frame
 
         # Recognize gesture
-        gesture = self.gesture_recognizer.recognize_gesture(
-            finger_states, hand_landmarks, self.hand_detector
-        )
+        try:
+            gesture = self.gesture_recognizer.recognize_gesture(
+                finger_states, hand_landmarks, self.hand_detector
+            )
+        except Exception as e:
+            if self.config.DEBUG_MODE:
+                print(f"Error recognizing gesture: {e}")
+            gesture = "IDLE"
 
         # Stabilize gesture
         stable_gesture = self.gesture_recognizer.stabilize_gesture(gesture)
@@ -111,25 +159,33 @@ class GestureController:
         if self.config.SHOW_GESTURES and stable_gesture:
             self._draw_gesture(frame, stable_gesture)
 
+        # Check for thumbs up to resume from any pause state
+        if stable_gesture == "THUMBS_UP":
+            self._handle_thumbs_up_toggle()
+
         # Execute actions if not paused
-        if not self.is_paused:
-            self._execute_gesture_action(stable_gesture, hand_landmarks, finger_states)
+        if not self.is_paused and not self.is_harsh_paused:
+            try:
+                self._execute_gesture_action(stable_gesture, hand_landmarks, finger_states)
+            except Exception as e:
+                if self.config.DEBUG_MODE:
+                    print(f"Error executing gesture action: {e}")
         else:
             # Release drag if paused
-            self.os_controller.stop_drag()
-
-        # Check for pause toggle
-        if stable_gesture == "THUMBS_UP":
-            self._toggle_pause()
+            try:
+                self.os_controller.stop_drag()
+            except Exception as e:
+                if self.config.DEBUG_MODE:
+                    print(f"Error stopping drag: {e}")
 
         # Display pause status
-        status_text = "PAUSED" if self.is_paused else "ACTIVE"
-        status_color = (0, 255, 255) if self.is_paused else (0, 255, 0)
-        self._draw_status(frame, status_text, status_color)
+        self._draw_pause_status(frame)
 
         return frame
 
-    def _execute_gesture_action(self, gesture: str, hand_landmarks, finger_states: dict) -> None:
+    def _execute_gesture_action(
+        self, gesture: str, hand_landmarks: Any, finger_states: dict
+    ) -> None:
         """Execute action based on recognized gesture.
 
         Args:
@@ -221,12 +277,55 @@ class GestureController:
     def _toggle_pause(self) -> None:
         """Toggle pause state with cooldown."""
         current_time = time.time()
-        if current_time - self.last_pause_time > 1.0:  # 1 second cooldown
+        if current_time - self.last_pause_time > self.config.PAUSE_COOLDOWN:
             self.is_paused = not self.is_paused
             self.last_pause_time = current_time
             print(f"Gesture controller {'PAUSED' if self.is_paused else 'RESUMED'}")
 
-    def _draw_gesture(self, frame, gesture: str) -> None:
+    def _activate_harsh_pause(self) -> None:
+        """Activate harsh pause mode (two-handed gesture)."""
+        if not self.is_harsh_paused:
+            self.is_harsh_paused = True
+            self.is_paused = False  # Clear regular pause
+            print("HARSH PAUSE activated (two hands open)")
+
+    def _handle_thumbs_up_toggle(self) -> None:
+        """Handle thumbs up gesture for pause/resume.
+
+        Thumbs up resumes from harsh pause or toggles regular pause.
+        """
+        current_time = time.time()
+        if current_time - self.last_pause_time > self.config.PAUSE_COOLDOWN:
+            if self.is_harsh_paused:
+                # Resume from harsh pause
+                self.is_harsh_paused = False
+                self.last_pause_time = current_time
+                print("RESUMED from harsh pause")
+            else:
+                # Toggle regular pause
+                self.is_paused = not self.is_paused
+                self.last_pause_time = current_time
+                print(f"Gesture controller {'PAUSED' if self.is_paused else 'RESUMED'}")
+
+    def _draw_pause_status(self, frame: np.ndarray) -> None:
+        """Draw pause status on frame with enhanced visual feedback.
+
+        Args:
+            frame: Frame to draw on
+        """
+        if self.is_harsh_paused:
+            status_text = "HARSH PAUSE"
+            status_color = (0, 0, 255)  # Red for harsh pause
+        elif self.is_paused:
+            status_text = "PAUSED"
+            status_color = (0, 255, 255)  # Yellow for regular pause
+        else:
+            status_text = "ACTIVE"
+            status_color = (0, 255, 0)  # Green for active
+
+        self._draw_status(frame, status_text, status_color)
+
+    def _draw_gesture(self, frame: np.ndarray, gesture: str) -> None:
         """Draw gesture name on frame.
 
         Args:
@@ -243,7 +342,7 @@ class GestureController:
             2,
         )
 
-    def _draw_status(self, frame, status: str, color: tuple) -> None:
+    def _draw_status(self, frame: np.ndarray, status: str, color: Tuple[int, int, int]) -> None:
         """Draw status text on frame.
 
         Args:
@@ -271,7 +370,7 @@ class GestureController:
             self.frame_count = 0
             self.start_time = time.time()
 
-    def _draw_fps(self, frame) -> None:
+    def _draw_fps(self, frame: np.ndarray) -> None:
         """Draw FPS on frame.
 
         Args:
@@ -299,7 +398,8 @@ class GestureController:
         print("Gesture Controller Started!")
         print("=" * 50)
         print("Controls:")
-        print("  - Thumbs Up: Pause/Resume")
+        print("  - Two Hands Open: Harsh Pause (immediate stop)")
+        print("  - Thumbs Up: Resume/Pause Toggle")
         print("  - ESC: Exit")
         print("=" * 50)
 
