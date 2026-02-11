@@ -121,14 +121,15 @@ class TestControlMapper:
         """Test resetting to default mappings."""
         # Modify mappings
         mapper.register_custom_mapping("CUSTOM", "custom")
+        assert mapper.map_gesture_to_action("CUSTOM") == "custom"
 
         # Reset
         mapper.reset_to_defaults()
 
-        # Check defaults are restored
+        # Check defaults are restored - POINT should still map to move_cursor
         action = mapper.map_gesture_to_action("POINT")
         assert action == "move_cursor"
 
-        # Custom mapping should be gone
+        # Custom mapping should be gone after reset
         action = mapper.map_gesture_to_action("CUSTOM")
-        assert action is None or action == "move_cursor"  # May reset to default structure
+        assert action is None

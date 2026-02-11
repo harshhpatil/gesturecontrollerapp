@@ -69,6 +69,9 @@ class TestGestureRecognizer:
 
     def test_recognize_three_fingers_gesture(self, recognizer):
         """Test recognizing three fingers gesture."""
+        # Set PALM_THRESHOLD higher to distinguish from three fingers
+        recognizer.config.PALM_THRESHOLD = 4
+
         finger_states = {
             "thumb": False,
             "index": True,
@@ -78,9 +81,8 @@ class TestGestureRecognizer:
         }
 
         gesture = recognizer.recognize_gesture(finger_states, None, None)
-        # THREE_FINGERS has 3 extended, which matches PALM_THRESHOLD
-        # So it returns RIGHT_CLICK (palm gesture)
-        assert gesture in ["THREE_FINGERS", "RIGHT_CLICK"]
+        # With only 3 fingers and PALM_THRESHOLD=4, this should not match palm
+        assert gesture == "THREE_FINGERS"
 
     def test_recognize_thumbs_up_gesture(self, recognizer):
         """Test recognizing thumbs up gesture."""
@@ -177,16 +179,18 @@ class TestGestureRecognizer:
         mock_hand = Mock()
         mock_detector = Mock()
 
-        # Simulate right swipe
-        positions = [(0.2 + i * 0.1, 0.5, 0) for i in range(10)]
+        # Simulate right swipe with significant movement
+        positions = [(0.1 + i * 0.08, 0.5, 0) for i in range(10)]
 
-        for pos in positions:
+        for i, pos in enumerate(positions):
             mock_detector.get_normalized_landmark = Mock(return_value=pos)
-            recognizer.detect_swipe(mock_hand, mock_detector)
-
-        # Last call should detect right swipe
-        swipe = recognizer.detect_swipe(mock_hand, mock_detector)
-        assert swipe in ["RIGHT", None]  # May not detect if threshold not met
+            if i == len(positions) - 1:
+                # On last iteration, check result
+                swipe = recognizer.detect_swipe(mock_hand, mock_detector)
+                # Should detect right swipe with this movement
+                assert swipe == "RIGHT"
+            else:
+                recognizer.detect_swipe(mock_hand, mock_detector)
 
     def test_reset(self, recognizer):
         """Test resetting recognizer state."""
